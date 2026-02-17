@@ -1,5 +1,5 @@
 """
-Remote MCP server for Claude.ai connectors — SSE transport over HTTP.
+Remote MCP server for Claude.ai connectors — Streamable HTTP transport.
 
 Deploy this to any cloud provider (Railway, Fly.io, Render, etc.) and add
 the URL as a custom connector in Claude.ai Settings → Connectors.
@@ -8,22 +8,24 @@ Usage:
     bse-connector-http                    # starts on port 8000
     PORT=3000 bse-connector-http          # starts on port 3000
 
-The connector URL for Claude.ai is: https://your-domain.com/sse
+The connector URL for Claude.ai is: https://your-domain.com/mcp
 """
 
+import contextlib
 import logging
 import os
 import sys
+from collections.abc import AsyncIterator
 
 import uvicorn
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
-from starlette.routing import Mount, Route
+from starlette.responses import JSONResponse
+from starlette.routing import Route
 
-from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from .server import server, _get_client
 
@@ -35,21 +37,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("bse-connector-http")
 
-# SSE transport — the /messages endpoint is where clients POST tool calls
-sse = SseServerTransport("/messages")
+# Streamable HTTP session manager — stateless mode for simplicity on free/starter tiers
+session_manager = StreamableHTTPSessionManager(
+    app=server,
+    stateless=True,
+    json_response=False,
+)
 
 
-async def handle_sse(request: Request) -> Response:
-    """SSE endpoint — Claude.ai connects here."""
-    client_ip = request.client.host if request.client else "unknown"
-    logger.info(f"New SSE connection from {client_ip}")
-    async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
-        await server.run(
-            streams[0],
-            streams[1],
-            server.create_initialization_options(),
-        )
-    return Response()
+async def handle_mcp(scope, receive, send):
+    """Streamable HTTP endpoint — Claude.ai connects here."""
+    await session_manager.handle_request(scope, receive, send)
 
 
 async def health(request: Request) -> JSONResponse:
@@ -57,17 +55,19 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "server": "bse-connector", "version": "0.1.0"})
 
 
-async def on_startup():
-    """Pre-warm the BSE client and securities index on startup."""
+@contextlib.asynccontextmanager
+async def lifespan(app: Starlette) -> AsyncIterator[None]:
+    """Manage startup/shutdown lifecycle."""
     logger.info("Pre-warming BSE client and securities index...")
     try:
         client = _get_client()
-        # Trigger securities index load (fetches ~4800 securities from BSE API)
         client.search_company("test", top_n=1)
         logger.info("BSE client and securities index ready")
     except Exception as e:
-        # Non-fatal — will retry on first request
         logger.warning(f"Pre-warm failed (will retry on first request): {e}")
+
+    async with session_manager.run():
+        yield
 
 
 # Starlette app
@@ -75,19 +75,18 @@ app = Starlette(
     debug=False,
     routes=[
         Route("/health", health, methods=["GET"]),
-        Route("/sse", handle_sse, methods=["GET"]),
-        Mount("/messages", app=sse.handle_post_message),
+        Route("/mcp", handle_mcp, methods=["GET", "POST", "DELETE", "OPTIONS"]),
     ],
     middleware=[
         Middleware(
             CORSMiddleware,
             allow_origins=["*"],
-            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
             allow_headers=["*"],
             expose_headers=["Mcp-Session-Id"],
         ),
     ],
-    on_startup=[on_startup],
+    lifespan=lifespan,
 )
 
 
@@ -97,7 +96,7 @@ def main():
     host = os.environ.get("HOST", "0.0.0.0")
 
     logger.info(f"Starting BSE Connector HTTP server on {host}:{port}")
-    logger.info(f"Claude.ai connector URL: http://{host}:{port}/sse")
+    logger.info(f"Claude.ai connector URL: http://{host}:{port}/mcp")
 
     uvicorn.run(
         app,
