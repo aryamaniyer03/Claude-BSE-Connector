@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "bse-connector": {
+      "command": "/Volumes/Coder/Claude-BSE-Connector/.venv/bin/bse-connector",
+      "args": [],
+      "env": {}
+    }
+  }
+}
