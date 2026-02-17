@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import re
 import sqlite3
 from datetime import datetime, timedelta
@@ -9,8 +10,9 @@ from pathlib import Path
 from typing import Any
 
 
-# Default cache location
-CACHE_DIR = Path.home() / ".bse_mcp_cache"
+# Cache location — respects BSE_CACHE_DIR env var for containerized deployments
+# (Render/Railway/Docker use ephemeral filesystems, so we point to a writable path)
+CACHE_DIR = Path(os.environ.get("BSE_CACHE_DIR", str(Path.home() / ".bse_mcp_cache")))
 CACHE_DB = CACHE_DIR / "documents.db"
 
 

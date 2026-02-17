@@ -27,7 +27,7 @@ from mcp.server.sse import SseServerTransport
 
 from .server import server, _get_client
 
-# Log to stderr
+# Log to stderr (stdout is reserved for MCP stdio protocol in local mode)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
@@ -41,7 +41,8 @@ sse = SseServerTransport("/messages")
 
 async def handle_sse(request: Request) -> Response:
     """SSE endpoint — Claude.ai connects here."""
-    logger.info(f"New SSE connection from {request.client.host if request.client else 'unknown'}")
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"New SSE connection from {client_ip}")
     async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
         await server.run(
             streams[0],
@@ -52,8 +53,8 @@ async def handle_sse(request: Request) -> Response:
 
 
 async def health(request: Request) -> JSONResponse:
-    """Health check endpoint."""
-    return JSONResponse({"status": "ok", "server": "bse-connector"})
+    """Health check endpoint for Render / load balancers."""
+    return JSONResponse({"status": "ok", "server": "bse-connector", "version": "0.1.0"})
 
 
 async def on_startup():
@@ -61,14 +62,15 @@ async def on_startup():
     logger.info("Pre-warming BSE client and securities index...")
     try:
         client = _get_client()
-        # Trigger securities index load
+        # Trigger securities index load (fetches ~4800 securities from BSE API)
         client.search_company("test", top_n=1)
         logger.info("BSE client and securities index ready")
     except Exception as e:
+        # Non-fatal — will retry on first request
         logger.warning(f"Pre-warm failed (will retry on first request): {e}")
 
 
-# Starlette app with CORS for browser-based MCP clients
+# Starlette app
 app = Starlette(
     debug=False,
     routes=[
@@ -102,6 +104,9 @@ def main():
         host=host,
         port=port,
         log_level="info",
+        # Production settings
+        timeout_keep_alive=65,      # slightly above Render's 60s LB timeout
+        timeout_graceful_shutdown=10,  # clean shutdown on SIGTERM
     )
 
 

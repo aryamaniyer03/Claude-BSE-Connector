@@ -1,13 +1,10 @@
 services:
   - type: web
     name: bse-connector
-    runtime: python
-    buildCommand: pip install -e .
-    startCommand: bse-connector-http
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PORT
         value: "10000"
-      - key: PYTHON_VERSION
-        value: "3.11.11"
     healthCheckPath: /health
     plan: free
