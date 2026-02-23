@@ -7,6 +7,6 @@ services:
       - key: PORT
         value: "10000"
       - key: BASE_URL
-        value: "https://eqplus.ai"
+        value: "https://mcp.eqplus.ai"
     healthCheckPath: /health
     plan: free
