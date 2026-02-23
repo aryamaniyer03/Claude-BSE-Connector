@@ -73,6 +73,7 @@ server = Server(
         "TOOL SELECTION GUIDE:\n"
         "- Company lookup (fuzzy): 'search_company' — handles partial names like 'rel' → Reliance\n"
         "- Quarterly P&L numbers: 'get_quarterly_financials' — structured Revenue/EBITDA/PAT/EPS\n"
+        "- Analyst consensus: 'get_analyst_consensus' — target prices, Buy/Sell ratings, EPS/revenue forecasts\n"
         "- Broad research (plans, outlook): 'research_company' — auto-fetches & caches transcripts\n"
         "- Specific filings: 'get_announcements' then 'fetch_document'\n"
         "- Dividends/splits/bonuses: 'get_corporate_actions'\n"
@@ -122,6 +123,27 @@ async def list_tools() -> list[Tool]:
                     "company": {
                         "type": "string",
                         "description": "Company name, symbol, or scrip code (e.g., 'TCS', 'Reliance', '500325')",
+                    }
+                },
+                "required": ["company"],
+            },
+        ),
+        Tool(
+            name="get_analyst_consensus",
+            description=(
+                "Get analyst consensus estimates for an Indian company from Yahoo Finance. "
+                "Returns: target price (mean/median/high/low), analyst recommendations "
+                "(Strong Buy/Buy/Hold/Sell/Strong Sell counts), EPS estimates (current & next year), "
+                "revenue estimates, EPS trend (7d/30d/60d/90d revisions), EPS revision counts, "
+                "growth estimates, and key valuation ratios (forward PE, P/B, EV/EBITDA). "
+                "Source: Yahoo Finance. Accepts company name, symbol, or scrip code."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "company": {
+                        "type": "string",
+                        "description": "Company name, symbol, or scrip code (e.g., 'TCS', 'Reliance', 'Apar Industries')",
                     }
                 },
                 "required": ["company"],
@@ -324,6 +346,10 @@ def _dispatch(name: str, arguments: dict, client: BSEClient) -> list[TextContent
 
     elif name == "get_quarterly_financials":
         result = client.get_quarterly_financials(arguments["company"])
+        return _json_response(result)
+
+    elif name == "get_analyst_consensus":
+        result = client.get_analyst_consensus(arguments["company"])
         return _json_response(result)
 
     elif name == "get_announcements":

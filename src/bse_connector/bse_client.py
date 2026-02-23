@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from bse import BSE
 from dateutil.relativedelta import relativedelta
 
+from .analyst import get_analyst_consensus
 from .categories import Category, Purpose, get_category_by_name, get_purpose_by_name
 from .resolver import SecurityIndex
 from .screener import get_financials
@@ -365,6 +366,30 @@ class BSEClient:
             "company": company_info,
             "quarters": [],
         }
+
+    # -------------------------------------------------------------------------
+    # Analyst Consensus (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_analyst_consensus(self, company: str) -> dict[str, Any]:
+        """
+        Get analyst consensus estimates from Yahoo Finance.
+
+        Returns target prices, Buy/Hold/Sell ratings, EPS and revenue
+        forecasts, EPS trend/revisions, and growth estimates.
+        """
+        company_info = self.resolve_company(company)
+
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        name = company_info.get("name", "")
+
+        result = get_analyst_consensus(symbol, scrip_code, name)
+        result["company"] = company_info
+        return result
 
     # -------------------------------------------------------------------------
     # Announcements
