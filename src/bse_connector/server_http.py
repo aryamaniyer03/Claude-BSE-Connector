@@ -23,7 +23,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Mount, Route
+from starlette.routing import Route
 
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
@@ -45,9 +45,20 @@ session_manager = StreamableHTTPSessionManager(
 )
 
 
-async def handle_mcp(scope, receive, send):
-    """Streamable HTTP endpoint — Claude.ai connects here."""
-    await session_manager.handle_request(scope, receive, send)
+class MCPMiddleware:
+    """ASGI middleware that intercepts /mcp requests and delegates to the
+    StreamableHTTPSessionManager. This avoids the Route vs Mount issue —
+    Route can't pass raw ASGI, and Mount redirects /mcp to /mcp/.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].rstrip("/") == "/mcp":
+            await session_manager.handle_request(scope, receive, send)
+        else:
+            await self.app(scope, receive, send)
 
 
 async def health(request: Request) -> JSONResponse:
@@ -70,12 +81,11 @@ async def lifespan(app: Starlette) -> AsyncIterator[None]:
         yield
 
 
-# Starlette app
-app = Starlette(
+# Starlette app — health check only; MCP is handled by middleware
+_inner_app = Starlette(
     debug=False,
     routes=[
         Route("/health", health, methods=["GET"]),
-        Mount("/mcp", app=handle_mcp),
     ],
     middleware=[
         Middleware(
@@ -88,6 +98,9 @@ app = Starlette(
     ],
     lifespan=lifespan,
 )
+
+# Wrap with MCP middleware so /mcp and /mcp/ both work
+app = MCPMiddleware(_inner_app)
 
 
 def main():
