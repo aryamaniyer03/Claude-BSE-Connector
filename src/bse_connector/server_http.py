@@ -23,7 +23,7 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Route
+from starlette.routing import Mount, Route
 
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
@@ -75,7 +75,7 @@ app = Starlette(
     debug=False,
     routes=[
         Route("/health", health, methods=["GET"]),
-        Route("/mcp", handle_mcp, methods=["GET", "POST", "DELETE", "OPTIONS"]),
+        Mount("/mcp", app=handle_mcp),
     ],
     middleware=[
         Middleware(
