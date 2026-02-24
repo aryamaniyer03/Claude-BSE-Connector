@@ -112,10 +112,10 @@ async def list_tools() -> list[Tool]:
             name="get_quarterly_financials",
             description=(
                 "Get structured quarterly P&L data for an Indian company. "
-                "Returns up to 13 quarters of: Revenue, Expenses, Operating Profit, OPM%, "
+                "Returns up to 6 quarters of: Revenue, Expenses, Operating Profit, OPM%, "
                 "Other Income, Interest, Depreciation, PBT, Tax%, Net Profit, EPS, "
                 "EBITDA, and EBITDA Margin. All values in Crores (INR). "
-                "Source: screener.in. Accepts company name, symbol, or scrip code."
+                "Source: Yahoo Finance. Accepts company name, symbol, or scrip code."
             ),
             inputSchema={
                 "type": "object",
