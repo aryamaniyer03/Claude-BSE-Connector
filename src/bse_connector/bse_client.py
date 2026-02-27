@@ -15,6 +15,7 @@ from .analyst import get_analyst_consensus
 from .categories import Category, Purpose, get_category_by_name, get_purpose_by_name
 from .resolver import SecurityIndex
 from .screener import get_financials
+from . import yfinance_extras
 
 try:
     from pypdf import PdfReader
@@ -735,6 +736,200 @@ class BSEClient:
             pass
 
         return company_info
+
+    # -------------------------------------------------------------------------
+    # Balance Sheet (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_balance_sheet(self, company: str, quarterly: bool = True) -> dict[str, Any]:
+        """Get balance sheet data (quarterly or annual)."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_balance_sheet(symbol, scrip_code, quarterly=quarterly)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Cash Flow Statement (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_cash_flow(self, company: str, quarterly: bool = True) -> dict[str, Any]:
+        """Get cash flow statement data (quarterly or annual)."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_cash_flow(symbol, scrip_code, quarterly=quarterly)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Annual Financials (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_annual_financials(self, company: str) -> dict[str, Any]:
+        """Get annual income statement data."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_annual_financials(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Historical Prices (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_price_history(
+        self, company: str, period: str = "1y", interval: str = "1d"
+    ) -> dict[str, Any]:
+        """Get historical OHLCV price data."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_price_history(symbol, scrip_code, period=period, interval=interval)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Holders / Ownership (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_holders(self, company: str) -> dict[str, Any]:
+        """Get shareholding data — institutional, mutual fund, insider."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_holders(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Upgrades / Downgrades (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_upgrades_downgrades(self, company: str) -> dict[str, Any]:
+        """Get analyst upgrades and downgrades."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_upgrades_downgrades(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Earnings History (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_earnings_history(self, company: str) -> dict[str, Any]:
+        """Get earnings history — actual vs estimate EPS."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_earnings_history(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Key Metrics / Company Profile (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_key_metrics(self, company: str) -> dict[str, Any]:
+        """Get comprehensive key metrics and company profile."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_key_metrics(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # News (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_news(self, company: str) -> dict[str, Any]:
+        """Get recent news articles for a company."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_news(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Sustainability / ESG (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_sustainability(self, company: str) -> dict[str, Any]:
+        """Get ESG/sustainability scores."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_sustainability(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Dividends & Splits History (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_dividends_splits(self, company: str) -> dict[str, Any]:
+        """Get historical dividends and stock splits."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_dividends_splits(symbol, scrip_code)
+        result["company"] = company_info
+        return result
+
+    # -------------------------------------------------------------------------
+    # Shares Outstanding (Yahoo Finance)
+    # -------------------------------------------------------------------------
+
+    def get_shares_outstanding(self, company: str) -> dict[str, Any]:
+        """Get historical shares outstanding data."""
+        company_info = self.resolve_company(company)
+        if not company_info:
+            return {"error": f"Company not found: {company}"}
+
+        symbol = company_info.get("symbol", "")
+        scrip_code = company_info.get("scrip_code", "")
+        result = yfinance_extras.get_shares_outstanding(symbol, scrip_code)
+        result["company"] = company_info
+        return result
 
     # -------------------------------------------------------------------------
     # Comprehensive Research (with caching)
